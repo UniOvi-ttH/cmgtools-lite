@@ -11,11 +11,14 @@ import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 MODULES = []
+from CMGTools.TTHAnalysis.tools.multilepFriendTreeProducersToCleanup import MODULES as multiModules
+MODULES += multiModules
 
 class VariableProducer(Module):
     def __init__(self,name,booker,modules):
         Module.__init__(self,name,booker)
         self._modules = [ (n,m() if type(m) == types.FunctionType else m) for (n,m) in modules ]
+        print self._modules
     def init(self,tree):
         for n,m in self._modules:
             if hasattr(m, 'init'): m.init(tree)
@@ -182,6 +185,7 @@ if options.queue:
 
     runner = ""
     super = ""
+    theoutput= args[1].replace('/pool/ciencias/','/pool/cienciasrw/')
     if options.env == "cern":
         runner = "lxbatch_runner.sh"
         super  = "bsub -q {queue}".format(queue = options.queue)
@@ -193,7 +197,6 @@ if options.queue:
             options.queue = "batch" 
         super  = "qsub -q {queue} -N happyTreeFriend".format(queue = options.queue)
         runner = "lxbatch_runner.sh"
-        theoutput= args[1].replace('/pool/ciencias/','/pool/cienciasrw/')
     else:
         raise RuntimeError, "I do not know what to do. Where am I? Please set the [env] option"
 
@@ -295,6 +298,7 @@ def _runIt(myargs):
                 if re.match(pat,m):
                     toRun[m] = True
         modulesToRun = [ (m,v) for (m,v) in MODULES if m in toRun ]
+    print 'looooping ###############'
     el = EventLoop([ VariableProducer(options.treeDir,booker,modulesToRun), ])
     el.loop([tb], eventRange=range)
     booker.done()
