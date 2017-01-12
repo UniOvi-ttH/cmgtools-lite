@@ -171,12 +171,17 @@ class KinMVA_2D_2lss_3l:
     def listBranches(self):
         return self._MVAs.keys()
     def __call__(self,event):
+        print 'event', type(event)
         out = {}
         for name, mva in self._MVAs.iteritems():
             _mva = mva
             for i,j in self.systsJEC.iteritems():
                 if j in name and not hasattr(event,"nJet"+j): _mva = self._MVAs[name.replace(j,"")]
-            if '2lss' in name: out[name] = _mva(event) if event.nLepFO_Recl>=2 else -99
+            if '2lss' in name: 
+                if  event.nLepFO_Recl>=2:
+                    print 'calling mva'
+                    out[name] = _mva(event) if event.nLepFO_Recl>=2 else -99
+                    print 'out',out[name]
             elif '3l' in name: out[name] = _mva(event) if event.nLepFO_Recl>=3 else -99
         return out
 

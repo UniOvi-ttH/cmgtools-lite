@@ -14,14 +14,12 @@ class EventVars2LSS:
     def listBranches(self):
         return self.branches[:]
     def __call__(self,event):
-
         allret = {}
 
         all_leps = [l for l in Collection(event,"LepGood","nLepGood")]
         nFO = getattr(event,"nLepFO"+self.inputlabel)
         chosen = getattr(event,"iF"+self.inputlabel)
         leps = [all_leps[chosen[i]] for i in xrange(nFO)]
-
         for var in self.systsJEC:
             _var = var
             if not hasattr(event,"nJet"+self.systsJEC[var]): _var = 0
@@ -30,7 +28,6 @@ class EventVars2LSS:
             _ijets_list = getattr(event,"iJSel"+self.inputlabel+self.systsJEC[_var])
             _ijets = [ij for ij in _ijets_list]
             jets = [ (jetsc[ij] if ij>=0 else jetsd[-ij-1]) for ij in _ijets]
-
             met = getattr(event,"met"+self.systsJEC[_var]+"_pt")
             metphi = getattr(event,"met"+self.systsJEC[_var]+"_phi")
             njet = len(jets); nlep = len(leps)
@@ -65,7 +62,6 @@ class EventVars2LSS:
 
             for br in self.namebranches:
                 allret[br+self.label+self.systsJEC[var]] = ret[br]
-	 	
 	return allret
 
 
