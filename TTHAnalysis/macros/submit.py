@@ -1,17 +1,22 @@
 import os
+from multiprocessing import Pool
 
 ## this script creates a sub-directory in the tree path for a given module
 ## and runs the friend tree producer for this module
 
 batch = True
 queue = "batch" #"batch" for Oviedo, "8nh" or others for lxplus
-path  = "/mnt_pool/fanae105/user/sscruz/TTH/samples"
+path  = "/pool/ciencias/HeppyTrees/ttH/"
 #path  = "trees/"
 force = True # if the friend tree already exists, module is not run; set to True to still run it
-
+print 'here'
 ## first: module to run, second: list of modules (comma separated) that are required to run
 modules = [
-	["leptonJetReCleanerTTH", ""],
+#	["leptonJetReCleanerTTH", ""]
+#	["ttH2lss","leptonJetReCleanerTTH"],
+	["kinMVA_2D_2lss_3l","leptonJetReCleanerTTH,ttH2lss"]
+	
+#	["ttHLepMEMFriend", ""],
 #	["eventBTagWeight","leptonJetReCleanerTTH"]
 	#["fastCombinedObjectRecleaner", ""]
 	#["leptonJetReCleanerSusyEWK2L" , ""                            ],
@@ -25,7 +30,8 @@ modules = [
          ] 
 
 ## in case you want to run only specific samples
-accept = ['MuonEG_Run2016H-PromptReco-v2_runs_281613_284035'
+accept = ['SingleElectron_Run2016B_23Sep2016_v3_runs_273150_275376_part8'
+#'MuonEG_Run2016H-PromptReco-v2_runs_281613_284035'
 	#'TTTT',
 	  #"WZTo3LNu",
         #"WGToLNuG",
@@ -201,6 +207,7 @@ def mkdir(path):
 	cmd("mkdir " + path)
 
 def submit(sample, module):
+	print 'meh'
 	global batch, queue, path
 	super = "python prepareEventVariablesFriendTree.py " + path + " " + path + "/" + module[0] + " -d " + sample + "   --tra2     --tree treeProducerSusyMultilepton -m " + module[0]
 	if not module[1].strip() == "":
@@ -208,23 +215,36 @@ def submit(sample, module):
 		for f in sm: super += " -F sf/t " + path + "/" + f + "/evVarFriend_" + sample + ".root"
 	if batch:
 		#super += " --env cern -q " + queue + " -N 50000 --log " + path + "/" + module[0] + "/log"
-		super += " -q " + queue + " -N 50000 --env oviedo"
+		super += " -q " + queue + " -N 5000000 --env oviedo"
 	cmd(super)
 
 
 path = path.rstrip("/")
 listdir = os.listdir(path)
 
-for module in modules:
+def parallelSubmission(module_d):
+	module = module_d[0]
+	d = module_d[1]
 
+	if not os.path.isdir(path + "/" + d): return None
+	if not ( os.path.exists(path + "/" + d + "/treeProducerSusyMultilepton/tree.root") or os.path.exists(path + "/" + d + "/treeProducerSusyMultilepton/tree.root.url") ): return None
+	if not force and os.path.exists(path + "/" + module[0] + "/evVarFriend_" + d + ".root"): return None
+	if accept  != [] and all([d.find(a) == -1 for a in accept ]): return None
+	if exclude != [] and any([d.find(e) >  -1 for e in exclude]): return None 
+	submit(d, module)
+
+for module in modules:
 	mkdir( module[0])
-	#mkdir(path + "/" + module[0] + "/log")
-	
-	for d in listdir:
-		if not os.path.isdir(path + "/" + d): continue
-		if not ( os.path.exists(path + "/" + d + "/treeProducerSusyMultilepton/tree.root") or os.path.exists(path + "/" + d + "/treeProducerSusyMultilepton/tree.root.url") ): continue
-		if not force and os.path.exists(path + "/" + module[0] + "/evVarFriend_" + d + ".root"): continue
-		if accept  != [] and all([d.find(a) == -1 for a in accept ]): continue
-		if exclude != [] and any([d.find(e) >  -1 for e in exclude]): continue
-		submit(d, module)
+	listJobs = []
+	pool = Pool(1)
+	for d in listdir: 
+		listJobs.append( [module, d] )
+	pool.map(parallelSubmission, listJobs)
+	# for d in listdir: 
+	# 	if not os.path.isdir(path + "/" + d): continue
+	# 	if not ( os.path.exists(path + "/" + d + "/treeProducerSusyMultilepton/tree.root") or os.path.exists(path + "/" + d + "/treeProducerSusyMultilepton/tree.root.url") ): continue
+	# 	if not force and os.path.exists(path + "/" + module[0] + "/evVarFriend_" + d + ".root"): continue
+	# 	if accept  != [] and all([d.find(a) == -1 for a in accept ]): continue
+	# 	if exclude != [] and any([d.find(e) >  -1 for e in exclude]): continue
+	# 	submit(d, module)
 
